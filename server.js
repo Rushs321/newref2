@@ -1,12 +1,24 @@
 #!/usr/bin/env node
 'use strict';
-const app = require('express')();
+const fastify = require('fastify')({ logger: true, trustProxy: true });
 const params = require('./src/params');
 const proxy = require('./src/proxy');
 
 const PORT = process.env.PORT || 8080;
 
-app.enable('trust proxy');
-app.get('/', params, proxy);
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+// Route for the main functionality
+fastify.get('/', { preHandler: params }, proxy);
+
+// Route for favicon.ico to avoid unnecessary requests
+fastify.get('/favicon.ico', async (request, reply) => {
+  reply.status(204).send();
+});
+
+// Start the server
+fastify.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
+  if (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+  fastify.log.info(`Server listening at ${address}`);
+});
