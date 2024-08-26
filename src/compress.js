@@ -10,8 +10,7 @@ function compress(req, res, inputStream) {
     .toFormat(format, {
       quality: req.params.quality,
       progressive: true,
-      optimizeScans: webp, // Optimize scans only for WebP
-      chromaSubsampling: webp ? '4:4:4' : '4:2:0' // Conditional chroma subsampling
+      optimizeScans: true
     });
 
   // Set the initial headers for the response
