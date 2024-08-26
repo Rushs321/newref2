@@ -1,35 +1,35 @@
 const sharp = require('sharp');
 const redirect = require('./redirect');
 
-function compress(req, res, inputStream) {
-  const format = req.params.webp ? 'webp' : 'jpeg';
+async function compress(request, reply, inputStream) {
+  const format = request.params.webp ? 'webp' : 'jpeg';
 
   // Create a sharp transformation stream
   const transform = sharp()
-    .grayscale(req.params.grayscale)
+    .grayscale(request.params.grayscale)
     .toFormat(format, {
-      quality: req.params.quality,
+      quality: request.params.quality,
       progressive: true,
       optimizeScans: true
     });
 
   // Set the initial headers for the response
-  res.setHeader('content-type', `image/${format}`);
+  reply.header('content-type', `image/${format}`);
 
   // Pipe the input stream through sharp, handle the metadata and pipe to response
   inputStream
     .pipe(transform)
     .on('info', (info) => {
       // Set headers based on the transformed image info
-      res.setHeader('content-length', info.size);
-      res.setHeader('x-original-size', req.params.originSize);
-      res.setHeader('x-bytes-saved', req.params.originSize - info.size);
+      reply.header('content-length', info.size);
+      reply.header('x-original-size', request.params.originSize);
+      reply.header('x-bytes-saved', request.params.originSize - info.size);
     })
     .on('error', () => {
       // Handle transformation errors
-      redirect(req, res);
+      redirect(request, reply);
     })
-    .pipe(res); // Pipe the final output to the response
+    .pipe(reply.raw); // Pipe the final output to the response
 }
 
 module.exports = compress;
