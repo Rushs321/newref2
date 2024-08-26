@@ -7,10 +7,8 @@ const copyHeaders = require('./copyHeaders');
 
 async function proxy(req, res) {
   try {
-    // Making the request with axios
-    const axiosResponse = await axios.get({
-      
-      url: req.params.url,
+    // Making the request with axios.get
+    const axiosResponse = await axios.get(req.params.url, {
       headers: {
         ...pick(req.headers, ["cookie", "dnt", "referer"]),
         "user-agent": "Bandwidth-Hero Compressor",
