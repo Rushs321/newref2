@@ -8,7 +8,7 @@ const copyHeaders = require('./copyHeaders');
 async function proxy(req, res) {
   try {
     // Making the request with axios
-    const axiosResponse = await axios({
+    const axiosResponse = await axios.get({
       method: 'get',
       url: req.params.url,
       headers: {
