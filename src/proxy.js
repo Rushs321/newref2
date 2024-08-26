@@ -1,45 +1,49 @@
-const fetch = require('node-fetch');
-const pick = require('lodash.pick');
+const undici = require('undici');
+const pick = require('lodash').pick;
 const shouldCompress = require('./shouldCompress');
 const redirect = require('./redirect');
 const compress = require('./compress');
 const copyHeaders = require('./copyHeaders');
 
 async function proxy(req, res) {
-  const url = req.params.url;
-  const headers = {
-    ...pick(req.headers, ["cookie", "dnt", "referer"]),
-    "user-agent": "Bandwidth-Hero Compressor",
-    "x-forwarded-for": req.headers["x-forwarded-for"] || req.ip,
-    via: "1.1 bandwidth-hero",
-  };
-
   try {
-    const origin = await fetch(url, {
+    // Perform the HTTP request using undici.request
+    const { statusCode, headers, body } = await undici.request(req.params.url, {
+      headers: {
+        ...pick(req.headers, ["cookie", "dnt", "referer"]),
+        "user-agent": "Bandwidth-Hero Compressor",
+        "x-forwarded-for": req.headers["x-forwarded-for"] || req.ip,
+        via: "1.1 bandwidth-hero",
+      },
+      timeout: 10000,
+      maxRedirects: 5,
       method: 'GET',
-      headers: headers,
-      redirect: 'follow',
-      compress: true,
+      compress: true, // Enable gzip/deflate compression
     });
 
-    if (!origin.ok) {
+    // Check for HTTP error responses
+    if (statusCode >= 400) {
       redirect(req, res);
       return;
     }
 
-    copyHeaders(origin.headers.raw(), res);
+    // Copy headers and handle compression or streaming
+    copyHeaders(headers, res);
     res.setHeader("content-encoding", "identity");
-    req.params.originType = origin.headers.get("content-type") || "";
-    req.params.originSize = origin.headers.get("content-length") || "0";
+    req.params.originType = headers["content-type"] || "";
+    req.params.originSize = headers["content-length"] || "0";
 
     if (shouldCompress(req)) {
-      return compress(req, res, origin.body); // Pass the stream directly
+      // Handle image compression with sharp
+      compress(req, res, body);
     } else {
+      // Handle non-compressed response by piping directly to the client
       res.setHeader("x-proxy-bypass", 1);
-      res.setHeader("content-length", origin.headers.get("content-length") || "0");
-      origin.body.pipe(res); // Stream directly to client
+      res.setHeader("content-length", headers["content-length"] || "0");
+      body.pipe(res);
     }
   } catch (error) {
+    // Handle any errors that occur during the request
     redirect(req, res);
   }
 }
