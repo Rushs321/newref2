@@ -5,14 +5,14 @@ const redirect = require('./redirect');
 const compress = require('./compress');
 const copyHeaders = require('./copyHeaders');
 
-async function proxy(req, res) {
+async function proxy(request, reply) {
   try {
     // Making the request with axios.get
-    const axiosResponse = await axios.get(req.params.url, {
+    const axiosResponse = await axios.get(request.params.url, {
       headers: {
-        ...pick(req.headers, ["cookie", "dnt", "referer"]),
+        ...pick(request.headers, ["cookie", "dnt", "referer"]),
         "user-agent": "Bandwidth-Hero Compressor",
-        "x-forwarded-for": req.headers["x-forwarded-for"] || req.ip,
+        "x-forwarded-for": request.headers["x-forwarded-for"] || request.ip,
         via: "1.1 bandwidth-hero",
       },
       responseType: 'stream', // To handle streaming data
@@ -23,29 +23,29 @@ async function proxy(req, res) {
 
     // Handle non-2xx responses
     if (axiosResponse.status >= 400) {
-      return redirect(req, res);
+      return redirect(request, reply);
     }
 
     // Copy headers from the response to our response
-    copyHeaders(axiosResponse, res);
+    copyHeaders(axiosResponse, reply);
 
     // Set headers for the response
-    res.setHeader("content-encoding", "identity");
-    req.params.originType = axiosResponse.headers["content-type"] || "";
-    req.params.originSize = axiosResponse.headers["content-length"] || "0";
+    reply.header("content-encoding", "identity");
+    request.params.originType = axiosResponse.headers["content-type"] || "";
+    request.params.originSize = axiosResponse.headers["content-length"] || "0";
 
-    if (shouldCompress(req)) {
+    if (shouldCompress(request)) {
       // Compress the image
-      return compress(req, res, axiosResponse.data);
+      return compress(request, reply, axiosResponse.data);
     } else {
       // Directly pipe the response stream
-      res.setHeader("x-proxy-bypass", 1);
-      res.setHeader("content-length", axiosResponse.headers["content-length"] || "0");
-      axiosResponse.data.pipe(res);
+      reply.header("x-proxy-bypass", 1);
+      reply.header("content-length", axiosResponse.headers["content-length"] || "0");
+      axiosResponse.data.pipe(reply.raw);
     }
   } catch (error) {
     // Handle errors (e.g., network issues)
-    return redirect(req, res);
+    return redirect(request, reply);
   }
 }
 
