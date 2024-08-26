@@ -1,43 +1,41 @@
 const sharp = require('sharp');
 const redirect = require('./redirect');
 
-const DEFAULT_QUALITY = 40;
-
-async function compress(request, reply, inputStream) {
-  const format = request.params.webp ? 'webp' : 'jpeg';
-
-  // Create a sharp transformation stream
-  const transform = sharp()
-    .grayscale(request.params.grayscale)
-    .toFormat(format, {
-      quality: request.params.quality || DEFAULT_QUALITY,
-      progressive: true,
-      optimizeScans: true,
-    });
-
-  // Set the initial headers for the response
-  reply.header('content-type', `image/${format}`);
-
-  // Handle the transformation stream and pipe it to the response
+async function compress(req, res) {
+  const format = req.query.webp ? 'webp' : 'jpeg';
+  
   try {
-    const pipeline = inputStream.pipe(transform);
-    
-    // Handle 'info' event to set dynamic headers
-    pipeline.on('info', (info) => {
-      if (!reply.sent) {
-        reply.header('content-length', info.size);
-        reply.header('x-original-size', request.params.originSize);
-        reply.header('x-bytes-saved', request.params.originSize - info.size);
-      }
+    const inputStream = req.raw; // Fastify request object
+    const transform = sharp()
+      .grayscale(req.query.grayscale)
+      .toFormat(format, {
+        quality: req.query.quality,
+        progressive: true,
+        optimizeScans: true
+      });
+
+    // Pipe the input stream through sharp
+    const { data: outputStream, info } = await new Promise((resolve, reject) => {
+      inputStream
+        .pipe(transform)
+        .toBuffer((err, output, info) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({ data: output, info });
+          }
+        });
     });
 
-    // Pipe the transformed stream to the response
-    pipeline.pipe(reply.raw);
+    // Set response headers and send the output
+    res.header('content-type', `image/${format}`);
+    res.header('content-length', info.size);
+    res.header('x-original-size', req.query.originSize);
+    res.header('x-bytes-saved', req.query.originSize - info.size);
+    res.code(200);
+    res.send(outputStream);
   } catch (error) {
-    // Handle transformation errors
-    if (!reply.sent) {
-      redirect(request, reply);
-    }
+    redirect(req, res);
   }
 }
 
