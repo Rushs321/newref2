@@ -12,7 +12,7 @@
   "dependencies": {
     "basic-auth": "^2.0.1",
     "express": "4.19.2",
-    "lodash": "4.17.21",
+    "lodash.pick": "4.4.0",
     "undici": "6.x",
     "sharp": "0.33.5"
   },
