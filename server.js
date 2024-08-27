@@ -1,21 +1,22 @@
 #!/usr/bin/env node
 'use strict';
-const fastify = require('fastify')({ logger: true, disableRequestLogging: true, trustProxy: true });
+const fastify = require('fastify')({ logger: true });
 const params = require('./src/params');
 const proxy = require('./src/proxy');
 
 const PORT = process.env.PORT || 8080;
 
-// Route for the main functionality
-fastify.get('/', { preHandler: params }, proxy);
+// Fastify hook to handle params as middleware
+fastify.addHook('preHandler', params);
 
-// Route for favicon.ico to avoid unnecessary requests
-fastify.get('/favicon.ico', async (request, reply) => {
-  reply.status(204).send();
-});
+// Define the main route
+fastify.get('/', proxy);
+
+// Handle favicon requests with a 204 No Content response
+fastify.get('/favicon.ico', (req, reply) => reply.status(204).send());
 
 // Start the server
-fastify.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
+fastify.listen({ port: PORT }, (err, address) => {
   if (err) {
     fastify.log.error(err);
     process.exit(1);
