@@ -41,7 +41,7 @@ async function proxy(request, reply) {
       // Directly pipe the response stream
       reply.header("x-proxy-bypass", 1);
       reply.header("content-length", axiosResponse.headers["content-length"] || "0");
-      axiosResponse.data.pipe(reply.raw);
+      axiosResponse.data.pipe(reply);
     }
   } catch (error) {
     // Handle errors (e.g., network issues)
