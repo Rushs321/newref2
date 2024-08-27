@@ -3,9 +3,25 @@ const pick = require('lodash').pick;
 const shouldCompress = require('./shouldCompress');
 const redirect = require('./redirect');
 const compress = require('./compress');
-const copyHeaders = require('./copyHeaders');
+const DEFAULT_QUALITY = 40;
 
 async function proxy(req, reply) {
+  // Parameter extraction and processing (formerly in params.js)
+  const { url, jpeg, bw, l } = req.query;
+
+  if (!url) {
+    return reply.send('bandwidth-hero-proxy');
+  }
+
+  const urls = Array.isArray(url) ? url.join('&url=') : url;
+  const cleanedUrl = urls.replace(/http:\/\/1\.1\.\d\.\d\/bmi\/(https?:\/\/)?/i, 'http://');
+
+  req.params.url = cleanedUrl;
+  req.params.webp = !jpeg;
+  req.params.grayscale = bw !== '0';
+  req.params.quality = parseInt(l, 10) || DEFAULT_QUALITY;
+
+  // Main proxy logic
   try {
     const axiosResponse = await axios.get(req.params.url, {
       headers: {
@@ -24,6 +40,7 @@ async function proxy(req, reply) {
       return redirect(req, reply);
     }
 
+    // Copy headers from the response to our reply
     copyHeaders(axiosResponse, reply);
 
     reply.header('content-encoding', 'identity');
