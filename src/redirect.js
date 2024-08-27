@@ -1,4 +1,4 @@
-function redirect(request, reply) {
+function redirect(req, reply) {
   if (reply.sent) {
     return;
   }
@@ -9,8 +9,8 @@ function redirect(request, reply) {
     .removeHeader('expires')
     .removeHeader('date')
     .removeHeader('etag')
-    .header('location', encodeURI(request.params.url))
-    .code(302)
+    .header('location', encodeURI(req.params.url))
+    .status(302)
     .send();
 }
 
