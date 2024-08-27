@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 'use strict';
-const fastify = require('fastify')({ logger: true });
+const fastify = require('fastify')({ logger: true,
+  disableRequestLogging: true,
+  trustProxy: true });
 const params = require('./src/params');
 const proxy = require('./src/proxy');
 
