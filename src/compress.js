@@ -1,43 +1,37 @@
 const sharp = require('sharp');
 const redirect = require('./redirect');
 
-function compress(req, reply, inputStream) {
+async function compress(req, reply, input) {
   const format = req.params.webp ? 'webp' : 'jpeg';
 
-  // Create a sharp transformation stream
-  const transform = sharp()
-    .grayscale(req.params.grayscale)
-    .toFormat(format, {
-      quality: req.params.quality,
-      progressive: true,
-      optimizeScans: true
-    });
+  try {
+    const { data: output, info } = await sharp(input)
+      .grayscale(req.params.grayscale)
+      .toFormat(format, {
+        quality: req.params.quality,
+        progressive: true,
+        optimizeScans: true
+      })
+      .toBuffer({ resolveWithObject: true });
 
-  let isHeadersSet = false;
-
-  // Handle the transform stream's info event to set headers
-  transform.on('info', (info) => {
-    if (!isHeadersSet) {
-      reply
-        .header('content-type', `image/${format}`)
-        .header('content-length', info.size)
-        .header('x-original-size', req.params.originSize)
-        .header('x-bytes-saved', req.params.originSize - info.size);
-      isHeadersSet = true;
+    if (!info || reply.sent) {
+      return redirect(req, reply);
     }
-  });
 
-  // Handle errors from the sharp transformation
-  transform.on('error', (err) => {
+    reply
+      .header('content-type', `image/${format}`)
+      .header('content-length', info.size)
+      .header('x-original-size', req.params.originSize)
+      .header('x-bytes-saved', req.params.originSize - info.size)
+      .status(200)
+      .send(output);
+
+  } catch (err) {
+    // Handle errors and redirect if necessary
     if (!reply.sent) {
       redirect(req, reply);
     }
-  });
-
-  // Pipe the input stream through sharp and then to the response
-  inputStream
-    .pipe(transform)
-    .pipe(reply.raw);
+  }
 }
 
 module.exports = compress;
