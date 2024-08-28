@@ -4,7 +4,7 @@ const proxy = require('./src/proxy');
 
 const app = fastify({
   logger: true,
-  disableRequestLogging: true,
+  disableRequestLogging: false,
   trustProxy: true // Enable trust proxy
 });
 
