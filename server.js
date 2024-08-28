@@ -1,6 +1,6 @@
 'use strict';
 const fastify = require('fastify');
-const proxy = require('./src/proxy');
+const processRequest = require('./src/proxy');
 
 const app = fastify({ 
   logger: true,
