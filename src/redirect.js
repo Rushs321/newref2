@@ -1,5 +1,5 @@
 function redirect(req, res) {
-  if (res.headersSent) {
+  if (res.raw.headersSent) {
     return;
   }
 
