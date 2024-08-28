@@ -38,9 +38,9 @@ async function proxy(req, res) {
       validateStatus: (status) => status < 400,
     });
 
-    if (axiosResponse.status >= 400) {
-      return redirect(req, res);
-    }
+    if (!axiosResponse.ok) {
+        return redirect(req, res);
+        }
 
     copyHeaders(axiosResponse, res);
 
