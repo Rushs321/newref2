@@ -7,7 +7,7 @@ const copyHeaders = require('./copyHeaders');
 const DEFAULT_QUALITY = 40;
 
 async function proxy(req, reply) {
-  // Parameter extraction and processing (formerly in params.js)
+  // Parameter extraction and processing
   const { url, jpeg, bw, l } = req.query;
 
   if (!url) {
@@ -22,8 +22,7 @@ async function proxy(req, reply) {
   req.params.grayscale = bw !== '0';
   req.params.quality = parseInt(l, 10) || DEFAULT_QUALITY;
 
-  // Main proxy logic
-  
+  try {
     const axiosResponse = await axios.get(req.params.url, {
       headers: {
         ...pick(req.headers, ['cookie', 'dnt', 'referer']),
@@ -34,28 +33,32 @@ async function proxy(req, reply) {
       responseType: 'stream',
       timeout: 10000,
       maxRedirects: 5,
-      validateStatus: (status) => status < 400,
+      validateStatus: (status) => status < 400, // Reject on any HTTP status >= 400
     });
 
-    if (axiosResponse.status >= 400) {
-      return redirect(req, reply);
-    }
-
-    // Copy headers from the response to our reply
+    // Copy headers from the axios response to the Fastify reply
     copyHeaders(axiosResponse, reply);
 
+    // Set headers for the response
     reply.header('content-encoding', 'identity');
     req.params.originType = axiosResponse.headers['content-type'] || '';
     req.params.originSize = axiosResponse.headers['content-length'] || '0';
 
     if (shouldCompress(req)) {
+      // Compress the image and send it
       return compress(req, reply, axiosResponse.data);
     } else {
+      // Directly pipe the response stream
       reply.header('x-proxy-bypass', 1);
       reply.header('content-length', axiosResponse.headers['content-length'] || '0');
       axiosResponse.data.pipe(reply.raw);
     }
-  
+  } catch (error) {
+    // In case of error, use redirect to handle it
+    if (!reply.sent) {
+      redirect(req, reply);
+    }
+  }
 }
 
 module.exports = proxy;
