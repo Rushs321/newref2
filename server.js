@@ -1,30 +1,19 @@
-#!/usr/bin/env node
 'use strict';
-const fastify = require('fastify');
+const fastify = require('fastify')({ logger: true });
 const proxy = require('./src/proxy');
 
 const PORT = process.env.PORT || 8080;
 
-const app = fastify({ 
-  logger: true,
-  disableRequestLogging: false,
-  trustProxy: true // Enable trust proxy
+fastify.register((instance, opts, next) => {
+  instance.get('/', proxy);
+  instance.get('/favicon.ico', (req, res) => res.status(204).send());
+  next();
 });
 
-// Set up the route
-app.get('/', async (req, reply) => {
-  return proxy(req, reply);
-});
-
-// Start the server
-const start = async () => {
-  try {
-    await app.listen({ host: '0.0.0.0', port: PORT });
-    console.log(`Listening on ${PORT}`);
-  } catch (err) {
-    app.log.error(err);
+fastify.listen(PORT, (err, address) => {
+  if (err) {
+    fastify.log.error(err);
     process.exit(1);
   }
-};
-
-start();
+  fastify.log.info(`Server listening at ${address}`);
+});
