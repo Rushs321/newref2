@@ -24,7 +24,7 @@ function compress(req, res, inputStream) {
     .on('error', () => {
       redirect(req, res);
     })
-    .pipe(res);
+    .pipe(res.raw); // Use res.raw to pipe the stream directly
 }
 
 module.exports = compress;
