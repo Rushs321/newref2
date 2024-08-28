@@ -1,7 +1,7 @@
-function copyHeaders(source, reply) {
+function copyHeaders(source, target) {
   for (const [key, value] of Object.entries(source.headers)) {
     try {
-      reply.header(key, value);
+      target.header(key, value);
     } catch (e) {
       console.log(e.message);
     }
