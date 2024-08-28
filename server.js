@@ -10,6 +10,10 @@ fastify.get('/', async (req, reply) => {
   return proxy(req, reply);
 });
 
+fastify.get('/favicon.ico', async (req, reply) => {
+  res.status(204).send();
+});
+
 // Start the server
 fastify.listen({ port: PORT, host: HOST }, (err, address) => {
   if (err) {
