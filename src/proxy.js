@@ -53,7 +53,7 @@ async function proxy(req, res) {
     } else {
       res.header("x-proxy-bypass", 1);
       res.header("content-length", axiosResponse.headers["content-length"] || "0");
-      axiosResponse.data.pipe(res);
+      axiosResponse.data.pipe(res.raw); // Use res.raw to pipe the stream directly
     }
   } catch (error) {
     return redirect(req, res);
