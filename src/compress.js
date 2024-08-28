@@ -5,22 +5,24 @@ async function compress(req, reply, input) {
   const format = req.params.webp ? 'webp' : 'jpeg';
 
   
-    const output = await sharp(input)
+    input.pipe(
+    sharp()
       .grayscale(req.params.grayscale)
       .toFormat(format, {
         quality: req.params.quality,
         progressive: true,
-        optimizeScans: true,
+        optimizeScans: true
       })
-      .toBuffer();
+      .toBuffer((err, output, info) => {
+        if (err || !info || res.headersSent) return redirect(req, res)
 
-    reply
+      reply
       .header('content-type', `image/${format}`)
       .header('content-length', output.length)
       .header('x-original-size', req.params.originSize)
       .header('x-bytes-saved', req.params.originSize - output.length)
       .send(output);
-  
+      })
+    );
 }
-
 module.exports = compress;
