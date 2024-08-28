@@ -14,7 +14,7 @@ const redirect = require('./redirect');
         optimizeScans: true
       })
       .toBuffer((err, output, info) => {
-        if (err || !info || res.headersSent) return redirect(req, res)
+        if (err || !info || reply.sent) return redirect(req, reply)
 
       reply
       .header('content-type', `image/${format}`)
