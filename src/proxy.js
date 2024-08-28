@@ -33,7 +33,6 @@ async function proxy(req, reply) {
       responseType: 'stream',
       timeout: 10000,
       maxRedirects: 5,
-      validateStatus: (status) => status < 400, // Reject on any HTTP status >= 400
     });
 
     // Copy headers from the axios response to the Fastify reply
@@ -43,6 +42,12 @@ async function proxy(req, reply) {
     reply.header('content-encoding', 'identity');
     req.params.originType = axiosResponse.headers['content-type'] || '';
     req.params.originSize = axiosResponse.headers['content-length'] || '0';
+
+    // Check if the status code is 400 or higher, and handle it
+    if (axiosResponse.status >= 400) {
+      reply.status(axiosResponse.status);
+      return redirect(req, reply);
+    }
 
     if (shouldCompress(req)) {
       // Compress the image and send it
