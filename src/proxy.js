@@ -7,7 +7,7 @@ const copyHeaders = require('./copyHeaders');
 const DEFAULT_QUALITY = 40;
 
 async function proxy(req, reply) {
-  // Parameter extraction and processing (formerly in params.js)
+  // Parameter extraction and processing
   const { url, jpeg, bw, l } = req.query;
 
   if (!url) {
@@ -35,10 +35,13 @@ async function proxy(req, reply) {
     maxRedirects: 5,
   });
 
-  // Check if the status code is 400 or higher, and redirect if so
+  // Set the reply status code based on the axios response
   reply.statusCode = axiosResponse.status;
+
+  // Check if the status code is 400 or higher, and redirect if so
   if (reply.statusCode >= 400) {
-    return redirect(req, reply);
+    // Redirect and ensure no further processing
+    return redirect(req, reply);  // Make sure redirect ends the response
   }
 
   // Copy headers from the response to our reply
@@ -53,10 +56,12 @@ async function proxy(req, reply) {
     // Compress the image and send it
     return compress(req, reply, axiosResponse.data);
   } else {
-    // Directly pipe the response stream
-    reply.header('x-proxy-bypass', 1);
-    reply.header('content-length', axiosResponse.headers['content-length'] || '0');
-    axiosResponse.data.pipe(reply.raw);
+    // Directly pipe the response stream only if the response is not already sent
+    if (!reply.sent) {
+      reply.header('x-proxy-bypass', 1);
+      reply.header('content-length', axiosResponse.headers['content-length'] || '0');
+      axiosResponse.data.pipe(reply.raw);
+    }
   }
 }
 
