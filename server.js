@@ -13,9 +13,11 @@ const PORT = process.env.PORT || 8080;
 // Set up the route
 app.get('/', proxy);
 
-// Handle favicon requests
-app.get('/favicon.ico', (req, res) => res.status(204).send());
-
+// Define a route for favicon.ico
+fastify.get('/favicon.ico', async (request, reply) => {
+  reply.code(204); // Set status code to 204 No Content
+  reply.raw.end(); // Explicitly end the response without sending any content
+});
 // Start the server
 const start = async () => {
   try {
