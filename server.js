@@ -2,7 +2,7 @@
 const fastify = require('fastify');
 const proxy = require('./src/proxy');
 
-const app = fastify({ 
+const app = fastify({
   logger: true,
   disableRequestLogging: true,
   trustProxy: true // Enable trust proxy
@@ -11,9 +11,10 @@ const app = fastify({
 const PORT = process.env.PORT || 8080;
 
 // Set up the route
-app.get('/', async (req, res) => {
-  return proxy(req, res);
-});
+app.get('/', proxy);
+
+// Handle favicon requests
+app.get('/favicon.ico', (req, res) => res.status(204).send());
 
 // Start the server
 const start = async () => {
