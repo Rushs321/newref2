@@ -11,7 +11,7 @@ fastify.register((instance, opts, next) => {
   next();
 });
 
-fastify.listen(HOST, PORT, (err, address) => {
+fastify.listen({ host: HOST , port: PORT }, (err, address) => {
   if (err) {
     fastify.log.error(err);
     process.exit(1);
