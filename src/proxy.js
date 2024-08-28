@@ -7,7 +7,7 @@ const copyHeaders = require('./copyHeaders');
 const DEFAULT_QUALITY = 40;
 
 async function proxy(req, reply) {
-  // Parameter extraction and processing
+  // Parameter extraction and processing (formerly in params.js)
   const { url, jpeg, bw, l } = req.query;
 
   if (!url) {
@@ -22,47 +22,41 @@ async function proxy(req, reply) {
   req.params.grayscale = bw !== '0';
   req.params.quality = parseInt(l, 10) || DEFAULT_QUALITY;
 
-  try {
-    const axiosResponse = await axios.get(req.params.url, {
-      headers: {
-        ...pick(req.headers, ['cookie', 'dnt', 'referer']),
-        'user-agent': 'Bandwidth-Hero Compressor',
-        'x-forwarded-for': req.headers['x-forwarded-for'] || req.ip,
-        via: '1.1 bandwidth-hero',
-      },
-      responseType: 'stream',
-      timeout: 10000,
-      maxRedirects: 5,
-    });
+  // Make the request to the target URL
+  const axiosResponse = await axios.get(req.params.url, {
+    headers: {
+      ...pick(req.headers, ['cookie', 'dnt', 'referer']),
+      'user-agent': 'Bandwidth-Hero Compressor',
+      'x-forwarded-for': req.headers['x-forwarded-for'] || req.ip,
+      via: '1.1 bandwidth-hero',
+    },
+    responseType: 'stream',
+    timeout: 10000,
+    maxRedirects: 5,
+  });
 
-    // Copy headers from the axios response to the Fastify reply
-    copyHeaders(axiosResponse, reply);
+  // Check if the status code is 400 or higher, and redirect if so
+  reply.statusCode = axiosResponse.status;
+  if (reply.statusCode >= 400) {
+    return redirect(req, reply);
+  }
 
-    // Set headers for the response
-    reply.header('content-encoding', 'identity');
-    req.params.originType = axiosResponse.headers['content-type'] || '';
-    req.params.originSize = axiosResponse.headers['content-length'] || '0';
+  // Copy headers from the response to our reply
+  copyHeaders(axiosResponse, reply);
 
-    // Check if the status code is 400 or higher, and handle it
-    if (axiosResponse.status >= 400) {
-      reply.status(axiosResponse.status);
-      return redirect(req, reply);
-    }
+  // Set headers for the response
+  reply.header('content-encoding', 'identity');
+  req.params.originType = axiosResponse.headers['content-type'] || '';
+  req.params.originSize = axiosResponse.headers['content-length'] || '0';
 
-    if (shouldCompress(req)) {
-      // Compress the image and send it
-      return compress(req, reply, axiosResponse.data);
-    } else {
-      // Directly pipe the response stream
-      reply.header('x-proxy-bypass', 1);
-      reply.header('content-length', axiosResponse.headers['content-length'] || '0');
-      axiosResponse.data.pipe(reply.raw);
-    }
-  } catch (error) {
-    // In case of error, use redirect to handle it
-    if (!reply.sent) {
-      redirect(req, reply);
-    }
+  if (shouldCompress(req)) {
+    // Compress the image and send it
+    return compress(req, reply, axiosResponse.data);
+  } else {
+    // Directly pipe the response stream
+    reply.header('x-proxy-bypass', 1);
+    reply.header('content-length', axiosResponse.headers['content-length'] || '0');
+    axiosResponse.data.pipe(reply.raw);
   }
 }
 
