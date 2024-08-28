@@ -22,7 +22,7 @@ async function proxy(req, reply) {
   req.params.quality = parseInt(l, 10) || DEFAULT_QUALITY;
 
   // Main proxy logic
-  try {
+  
     const axiosResponse = await axios.get(req.params.url, {
       headers: {
         ...pick(req.headers, ['cookie', 'dnt', 'referer']),
@@ -54,9 +54,7 @@ async function proxy(req, reply) {
       reply.header('content-length', axiosResponse.headers['content-length'] || '0');
       axiosResponse.data.pipe(reply.raw);
     }
-  } catch (error) {
-    return redirect(req, reply);
-  }
+  
 }
 
 module.exports = proxy;
