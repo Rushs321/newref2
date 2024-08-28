@@ -1,6 +1,6 @@
 'use strict';
 const fastify = require('fastify');
-const processRequest = require('./src/proxy');
+const proxy = require('./src/proxy');
 
 const app = fastify({ 
   logger: true,
@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 8080;
 
 // Set up the route
 app.get('/', async (req, res) => {
-  return processRequest(req, res);
+  return proxy(req, res);
 });
 
 // Start the server
