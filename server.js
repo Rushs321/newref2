@@ -3,6 +3,7 @@ const fastify = require('fastify')({ logger: true });
 const proxy = require('./src/proxy');
 
 const PORT = process.env.PORT || 8080;
+const HOST = process.env.HOST || '0.0.0.0';
 
 fastify.register((instance, opts, next) => {
   instance.get('/', proxy);
@@ -10,7 +11,7 @@ fastify.register((instance, opts, next) => {
   next();
 });
 
-fastify.listen(PORT, (err, address) => {
+fastify.listen(HOST, PORT, (err, address) => {
   if (err) {
     fastify.log.error(err);
     process.exit(1);
