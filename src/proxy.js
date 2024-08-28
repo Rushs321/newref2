@@ -38,10 +38,9 @@ async function proxy(req, reply) {
   // Set the reply status code based on the axios response
   reply.statusCode = axiosResponse.status;
 
-  // Check if the status code is 400 or higher, and redirect if so
+  // If the response status code is 400 or higher, redirect and end response
   if (reply.statusCode >= 400) {
-    // Redirect and ensure no further processing
-    return redirect(req, reply);  // Make sure redirect ends the response
+    return redirect(req, reply);  // Redirect will close the response
   }
 
   // Copy headers from the response to our reply
@@ -60,7 +59,15 @@ async function proxy(req, reply) {
     if (!reply.sent) {
       reply.header('x-proxy-bypass', 1);
       reply.header('content-length', axiosResponse.headers['content-length'] || '0');
-      axiosResponse.data.pipe(reply.raw);
+
+      // Pipe the response data to the reply's raw stream
+      axiosResponse.data.pipe(reply.raw).on('error', (err) => {
+        // Ensure error handling for the stream
+        console.error('Stream Error:', err.message);
+        if (!reply.sent) {
+          reply.status(500).send('Stream Error');
+        }
+      });
     }
   }
 }
