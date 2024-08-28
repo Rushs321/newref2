@@ -1,35 +1,37 @@
 const sharp = require('sharp');
 const redirect = require('./redirect');
 
-async function compressImg(request, reply, imgData) {
-    const { webp, grayscale, quality, originSize } = request.params;
-    const imgFormat = webp ? 'webp' : 'jpeg';
+async function compress(req, reply, inputStream) {
+  const format = req.params.webp ? 'webp' : 'jpeg';
 
-    try {
-        // Create the sharp instance and start the pipeline
-        let sharpInstance = sharp(imgData)
-            .grayscale(grayscale) // Apply grayscale conditionally
-            .toFormat(imgFormat, {
-                quality, // Use the provided quality
-                progressive: true,
-                optimizeScans: webp, // Optimize scans only for WebP
-                chromaSubsampling: webp ? '4:4:4' : '4:2:0', // Conditional chroma subsampling
-            });
+  // Create a sharp transformation stream
+  const transform = sharp()
+    .grayscale(req.params.grayscale)
+    .toFormat(format, {
+      quality: req.params.quality,
+      progressive: true,
+      optimizeScans: true
+    });
 
-        // Convert to buffer and get info
-        const { data, info } = await sharpInstance.toBuffer({ resolveWithObject: true });
+  // Set the initial headers for the response
+  reply.header('content-type', `image/${format}`);
 
-        // Send response with appropriate headers
-        reply
-            .header('content-type', `image/${imgFormat}`)
-            .header('content-length', info.size)
-            .header('x-original-size', originSize)
-            .header('x-bytes-saved', originSize - info.size)
-            .code(200)
-            .send(data);
-    } catch (error) {
-        return redirect(request, reply);
-    }
+  // Pipe the input stream through sharp, handle the metadata, and pipe to reply
+  inputStream
+    .pipe(transform)
+    .on('info', (info) => {
+      // Set headers based on the transformed image info
+      reply.header('content-length', info.size);
+      reply.header('x-original-size', req.params.originSize);
+      reply.header('x-bytes-saved', req.params.originSize - info.size);
+    })
+    .on('error', () => {
+      // Handle transformation errors
+      if (!reply.sent) {
+        redirect(req, reply);
+      }
+    })
+    .pipe(reply.raw); // Pipe the final output to the response
 }
 
 module.exports = compress;
