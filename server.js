@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 8080;
 
 const app = fastify({ 
   logger: true,
-  disableRequestLogging: true,
+  disableRequestLogging: false,
   trustProxy: true // Enable trust proxy
 });
 
